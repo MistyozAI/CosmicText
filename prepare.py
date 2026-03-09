@@ -6,8 +6,8 @@ Tokenizes on-the-fly and creates train.bin/val.bin files directly.
 
 Dataset Plan:
 - Wikipedia (250M) + OpenWebText (250M) = 500M text tokens
-- Conceptual Captions (100M) + LAION COCO (100M) = 200M image caption tokens
-- Total: ~700M tokens across 4 datasets
+- Conceptual Captions 3M (40M) + Conceptual Captions 12M (120M) = 160M image caption tokens
+- Total: ~660M tokens across 4 datasets
 """
 
 import os
@@ -26,7 +26,7 @@ from termcolor import colored
 from dataclasses import dataclass
 from huggingface_hub import login
 
-HF_TOKEN = "HF_token_here"
+HF_TOKEN = "hf_token1234"
 
 tokenizer = tiktoken.get_encoding("gpt2")
 EOT_TOKEN = tokenizer.eot_token
@@ -105,7 +105,7 @@ class DatasetProcessor:
             DatasetConfig(
                 name="conceptual_captions",
                 dataset_id="google-research-datasets/conceptual_captions",
-                target_tokens=100_000_000,
+                target_tokens=40_000_000,
                 use_streaming=True,
                 columns=["caption"],
                 min_tokens=5,
@@ -113,11 +113,11 @@ class DatasetProcessor:
                 is_caption=True
             ),
             DatasetConfig(
-                name="laion_coco",
-                dataset_id="laion/laion-coco",
-                target_tokens=100_000_000,
+                name="conceptual_captions_12m",
+                dataset_id="google-research-datasets/conceptual-captions-12m",
+                target_tokens=120_000_000,
                 use_streaming=True,
-                columns=["TEXT"],
+                columns=["caption"],
                 min_tokens=5,
                 test_size=0.0005,
                 is_caption=True
@@ -415,7 +415,7 @@ class DatasetProcessor:
         total_val_tokens = sum(stats.get('val_tokens', 0) for stats in self.dataset_stats.values())
         total_chunks = sum(stats['chunks'] for stats in self.dataset_stats.values())
         total_time = sum(stats.get('processing_time', 0) for stats in self.dataset_stats.values())
-        target_total = 700_000_000
+        target_total = 660_000_000
 
         report_file = self.output_dir / "summary_report.txt"
 
@@ -449,7 +449,7 @@ class DatasetProcessor:
 
             categories = {
                 "Core Text (target: 500M)": ["wikipedia", "openwebtext"],
-                "Image Captions (target: 200M)": ["conceptual_captions", "laion_coco"]
+                "Image Captions (target: 160M)": ["conceptual_captions", "conceptual_captions_12m"]
             }
 
             for category, datasets in categories.items():
@@ -472,7 +472,7 @@ class DatasetProcessor:
 
         print_status("="*80, "info")
         print_status("ALL DATASETS PROCESSED", "success")
-        print_status(f"Total tokens : {total_tokens/1e6:.1f}M / 700M ({(total_tokens/target_total)*100:.1f}%)", "info")
+        print_status(f"Total tokens : {total_tokens/1e6:.1f}M / 660M ({(total_tokens/target_total)*100:.1f}%)", "info")
         print_status(f"Train        : {total_train_tokens/1e6:.1f}M tokens", "info")
         print_status(f"Val          : {total_val_tokens/1e6:.1f}M tokens", "info")
         print_status(f"Total time   : {total_time/3600:.1f} hours", "info")
@@ -482,9 +482,9 @@ class DatasetProcessor:
     def run(self):
         print_status("Starting CosmicText Dataset Preparation", "info")
         print_status(f"Output directory: {self.output_dir}", "info")
-        print_status(f"Target: ~700M tokens across {len(self.dataset_configs)} datasets", "info")
+        print_status(f"Target: ~660M tokens across {len(self.dataset_configs)} datasets", "info")
         print_status(f"  Text    : Wikipedia (250M) + OpenWebText (250M) = 500M", "info")
-        print_status(f"  Captions: Conceptual Captions (100M) + LAION COCO (100M) = 200M", "info")
+        print_status(f"  Captions: Conceptual Captions 3M (40M) + Conceptual Captions 12M (120M) = 160M", "info")
         print_status(f"Processing: One dataset at a time (sequential)", "info")
         print_status(f"Output format: train.bin + val.bin per dataset", "info")
         print_status("="*80, "info")
@@ -501,7 +501,7 @@ class DatasetProcessor:
                 if stats['tokens'] > 0:
                     self.dataset_stats[config.name] = stats
                     self.total_tokens_processed += stats['tokens']
-                    print_status(f"Running total: {self.total_tokens_processed/1e6:.1f}M tokens ({(self.total_tokens_processed/700e6)*100:.1f}% of 700M)", "progress")
+                    print_status(f"Running total: {self.total_tokens_processed/1e6:.1f}M tokens ({(self.total_tokens_processed/660e6)*100:.1f}% of 660M)", "progress")
                 else:
                     print_status(f"{config.name} produced 0 tokens - skipping", "warning")
 
